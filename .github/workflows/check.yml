@@ -1,0 +1,79 @@
+# Runs the same checks as `make check`.
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.4'
+          cache: true
+
+      - run: flutter pub get
+      - run: node --test scripts/auth_site_test.mjs
+      - run: python3 scripts/sync_legal_pages.py --check
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      - run: flutter test
+      - run: make test-functions
+
+  database:
+    runs-on: ubuntu-latest
+    container: postgres:17
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: test-only
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          psql -v ON_ERROR_STOP=1 -f scripts/database_test_bootstrap.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/schema.sql
+          { echo 'begin;'; cat scripts/database_regression.sql scripts/promo_regression.sql scripts/free_usage_regression.sql scripts/device_check_regression.sql; echo 'rollback;'; } | psql -v ON_ERROR_STOP=1
+        env:
+          PGHOST: postgres
+          PGUSER: postgres
+          PGPASSWORD: test-only
+          PGDATABASE: postgres
+
+  native-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.4'
+          cache: true
+      - run: flutter pub get
+      - run: flutter build ios --release --no-codesign
+
+  native-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.4'
+          cache: true
+      - run: flutter pub get
+      - run: flutter build apk --debug

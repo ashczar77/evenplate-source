@@ -1,0 +1,57 @@
+group 'com.onesignal.flutter'
+version '5.6.8'
+
+def safeEnvFlagGet(prop) {
+    def value = System.getenv(prop)
+    def normalizedValue = value?.toString()?.trim()
+    return normalizedValue != null && (normalizedValue.equalsIgnoreCase('true') || normalizedValue == '1')
+}
+
+def oneSignalVersion = '5.9.9'
+def oneSignalDisableLocation = safeEnvFlagGet('ONESIGNAL_DISABLE_LOCATION')
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.0.0'
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 34
+    // Condition for namespace compatibility in AGP <4.2
+    if (project.android.hasProperty("namespace")) {
+        namespace 'com.onesignal.flutter'
+    }
+
+    defaultConfig {
+        minSdkVersion 16
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+    lintOptions {
+        disable 'InvalidPackage'
+    }
+}
+
+dependencies {
+    if (oneSignalDisableLocation) {
+        implementation "com.onesignal:core:${oneSignalVersion}"
+        implementation "com.onesignal:notifications:${oneSignalVersion}"
+        implementation "com.onesignal:in-app-messages:${oneSignalVersion}"
+    } else {
+        implementation "com.onesignal:OneSignal:${oneSignalVersion}"
+    }
+}

@@ -1,0 +1,44 @@
+project_id = "dioynjwmaehzpsctlioj"
+
+[auth]
+enable_anonymous_sign_ins = false
+site_url = "evenplate://auth-callback"
+additional_redirect_urls = ["evenplate://auth-callback"]
+
+[auth.email]
+enable_confirmations = true
+enable_signup = true
+# Custom SMTP (Resend) is configured in the hosted Auth dashboard, not here.
+# Do not put the API key in this file. See README "Auth email for store launch".
+
+# Per function gateway auth. Without these entries the CLI defaults every
+# function to verify_jwt = true, which is right for the app but wrong for an
+# inbound provider webhook.
+
+[functions.analyze-plate]
+# The app sends the signed-in user's access token and the function needs
+# auth.uid() for the quota check, so the gateway must enforce a valid JWT.
+verify_jwt = true
+
+[functions.analyze-foods]
+# Typed foods use the signed-in token and their own text credit ledger.
+verify_jwt = true
+
+[functions.revenuecat-webhook]
+# RevenueCat authenticates with its own shared secret, not a Supabase JWT, so
+# gateway JWT checks would reject every delivery before the handler runs. The
+# function verifies the secret itself and fails closed when it is unset.
+verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = true
+
+[functions.reconcile-billing]
+verify_jwt = true
+
+[functions.legal]
+# Public store policy and support pages contain no customer data.
+verify_jwt = false
+
+[functions.device-access]
+verify_jwt = true

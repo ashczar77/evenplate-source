@@ -1,0 +1,51 @@
+-- Isolated fixtures; run only within a rollback transaction.
+do $$ begin
+ if exists(select 1 from auth.users where id in ('00000000-0000-4000-8000-000000000501','00000000-0000-4000-8000-000000000502','00000000-0000-4000-8000-000000000503')) then raise exception 'Device fixtures already exist'; end if;
+ if exists(select 1 from private.device_admission) then raise exception 'Live admission pending, do not run regression'; end if;
+ if has_function_privilege('authenticated','public.begin_device_admission(uuid,text,text)','execute') or has_function_privilege('authenticated','public.grant_device_support_exception(uuid)','execute') then raise exception 'Device admin operation accessible to client'; end if;
+end $$;
+insert into auth.users(id,email) values('00000000-0000-4000-8000-000000000501','ep.device.fixture+one@gmail.com'),('00000000-0000-4000-8000-000000000502','other-device-fixture@example.com');
+update private.device_policy set enabled=true;
+select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000501',true);
+do $$ declare q jsonb; op uuid; n int; begin
+ q:=public.consume_scan_credit();
+ if q->>'allowed'<>'false' or q->>'reason'<>'device_required' then raise exception 'Direct RPC bypasses qualification: %',q; end if;
+ q:=public.consume_food_score_credit();
+ if q->>'allowed'<>'false' then raise exception 'Text RPC bypasses qualification'; end if;
+ if (select free_scans_remaining from public.profiles where id='00000000-0000-4000-8000-000000000501')<>3 then raise exception 'Denied qualification spent free credit'; end if;
+ update public.profiles set photo_purchased=1,text_purchased=1 where id='00000000-0000-4000-8000-000000000501';
+ q:=public.consume_scan_credit();
+ if q->>'allowed'<>'true' or q->>'used_purchased'<>'true' then raise exception 'Purchased photo access blocked'; end if;
+ q:=public.consume_food_score_credit();
+ if q->>'allowed'<>'true' or q->>'used_purchased'<>'true' then raise exception 'Purchased text access blocked'; end if;
+ q:=public.begin_device_admission('00000000-0000-4000-8000-000000000501','dG9rZW4=','production');
+ op:=(q->>'operation')::uuid;
+ if q->>'token'<>'dG9rZW4=' then raise exception 'Encrypted retry token did not round-trip'; end if;
+ if (select token_cipher from private.device_admission)=convert_to('dG9rZW4=','UTF8') then raise exception 'Pending token is plaintext'; end if;
+ q:=public.begin_device_admission('00000000-0000-4000-8000-000000000502','b3RoZXI=','production');
+ if q->>'status'<>'busy' then raise exception 'Parallel mailbox bypassed admission serialization'; end if;
+ n:=public.select_device_admission_bit(op,0);
+ if public.select_device_admission_bit(op,1)<>0 then raise exception 'Parallel retry consumed another slot'; end if;
+ if public.abort_device_admission(op) then raise exception 'Uncertain Apple write was automatically reopened'; end if;
+ if not public.finish_device_admission(op) then raise exception 'Successful admission was not settled'; end if;
+ if public.finish_device_admission(op) then raise exception 'Duplicate settlement changed eligibility'; end if;
+ if not private.has_device_eligibility('00000000-0000-4000-8000-000000000501') then raise exception 'Eligibility missing'; end if;
+ q:=public.consume_scan_credit();
+ if q->>'allowed'<>'true' or q->>'photo_remaining'<>'2' then raise exception 'Qualified weekly quota unavailable'; end if;
+end $$;
+delete from auth.users where id='00000000-0000-4000-8000-000000000501';
+insert into auth.users(id,email) values('00000000-0000-4000-8000-000000000503','epdevicefixture+return@googlemail.com');
+do $$ begin
+ if not private.has_device_eligibility('00000000-0000-4000-8000-000000000503') then raise exception 'Deletion/alias consumed another qualification'; end if;
+ update private.device_eligibility set expires_at=now()-interval '1 second' where identity_key=private.device_identity('00000000-0000-4000-8000-000000000503');
+ if private.has_device_eligibility('00000000-0000-4000-8000-000000000503') then raise exception 'Expired eligibility accepted'; end if;
+ perform public.expire_device_eligibility();
+ if exists(select 1 from private.device_eligibility where identity_key=private.device_identity('00000000-0000-4000-8000-000000000503')) then raise exception 'Expired hash retained'; end if;
+ perform public.grant_device_support_exception('00000000-0000-4000-8000-000000000503');
+ if not private.has_device_eligibility('00000000-0000-4000-8000-000000000503') then raise exception 'Support recovery failed'; end if;
+ update public.profiles set is_pro=true,subscription_expires_at=now()+interval '1 day',free_scans_remaining=75,text_included_remaining=100 where id='00000000-0000-4000-8000-000000000502';
+ perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000502',true);
+ if public.consume_scan_credit()->>'allowed'<>'true' then raise exception 'Pro access blocked by DeviceCheck'; end if;
+end $$;
+update private.device_policy set enabled=false;
+select set_config('request.jwt.claim.sub','',true);

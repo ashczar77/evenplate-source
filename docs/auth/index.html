@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src https://dioynjwmaehzpsctlioj.supabase.co; base-uri 'none'; form-action 'none'">
+<title>EvenPlate account</title><link rel="stylesheet" href="style.css">
+<script type="module" src="page.mjs"></script></head>
+<body><main><p class="brand">EvenPlate</p><h1 id="title">Your account</h1>
+<p id="message" role="status" aria-live="polite">Open the link from your latest EvenPlate email to continue.</p>
+<div id="actions" hidden><button id="browser">Continue in this browser</button>
+<a id="native" hidden>Open EvenPlate on this phone</a>
+<p>You can confirm your email or reset your password here, then sign in to the app.</p></div>
+<form id="password-form" hidden><label for="password">New password</label>
+<input id="password" type="password" autocomplete="new-password" required>
+<p>10+ characters, with upper and lowercase, a number, and a symbol.</p>
+<label for="confirmation">Confirm new password</label><input id="confirmation" type="password" autocomplete="new-password" required>
+<button id="save" type="submit">Save password</button></form>
+<p>Need help? <a href="mailto:evenplatesupport@gmail.com">Contact EvenPlate support</a></p>
+</main></body></html>

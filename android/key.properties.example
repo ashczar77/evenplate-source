@@ -1,0 +1,9 @@
+# Copy to android/key.properties (gitignored) when you are ready to sign a
+# Play upload. Until then, release builds keep using the debug keystore so
+# `flutter run --release` still works on a device you own.
+#
+# storeFile is relative to the android/app directory.
+storePassword=
+keyPassword=
+keyAlias=upload
+storeFile=upload-keystore.jks

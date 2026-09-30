@@ -1,0 +1,72 @@
+# Local Agent Instructions
+AGENTS.md
+*.p8
+
+# Environment variables & secrets
+# The .example templates are intentionally tracked.
+.env
+*.env
+!.env.example
+supabase/.env.functions
+!supabase/.env.functions.example
+*.local
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
+
+# Android signing
+android/key.properties
+*.jks
+*.keystore
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+coverage/
+.pub-cache/
+.pub/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.iws
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# Internal testing & verification notes
+MANUAL_VERIFICATION_CHECKLIST.md
+*CHECKLIST*.md
+notes.txt
+
+# Reference assets & design inspirations
+assets/reference/
+*evenplate-assets*
+
+# Local scratch
+.sqlcheck-venv/
+test/tmp/
+
+# Vendored package generated files
+third_party/onesignal_flutter/android/.gradle/
+
+# Keep private planning and review material out of this source copy
+/artifacts/
+/APP_DECISIONS.md
+/DEVICECHECK_OPERATIONS.md
+/GITHUB_PAGES_SETUP.md
+/IMPLEMENTATION_PLAN.md
+/MANUAL_TEST_GUIDE.md
+/PRODUCTION_READINESS.md
+/SCORING_PLAN.md
+/SCORING_REVIEW.md
+/SHIPATON_SUBMISSION_GUIDE.md
+/revenuecat_shipaton_2026_guide.md
